@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &100000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 400000}
+  - 114: {fileID: 11400000}
+  m_Layer: 0
+  m_Name: kView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &400000
+Transform:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 100000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 750c1c895bc2246eabb045f16eabfd1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  shouldAutoInitialize: 1
+  sourceSprite: {fileID: 0}
+  m_clipSource: {fileID: 0}
+  m_forceRender: 0
+  m_parentObject: {fileID: 0}
+  m_blendingColor: {r: 1, g: 1, b: 1, a: 1}
+  m_defaultAnim:
+    type: 0
+    id: 0
+    name: 
+  AUTO_SCROLL_MAX_VELOCITY: 2500
+  AUTO_SCROLL_STOP_VELOCITY: 50
+  AUTO_SCROLL_IMPULSE_AMPLIFIER: 1
+  AUTO_SCROLL_DECELERATION_FACTOR: 2.5999999
+  MAX_DRAG_PERCENT_FROM_SOURCE: 1
+  SPRING_BACK_ELASTICITY: 1
+  clipChilds: 1
+  viewSize: {x: 0, y: 0}
+  edgeInset: {x: 10, y: 10}
+  allowVerticalScroll: 0
+  allowHorizontalScroll: 0
+  showScrollBar: 0
+  alignMode: 9
+  m_superClipSource: {fileID: 0}
+--- !u!1001 &100100000
+Prefab:
+  m_ObjectHideFlags: 1
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+  m_ParentPrefab: {fileID: 0}
+  m_RootGameObject: {fileID: 100000}
+  m_IsPrefabParent: 1
