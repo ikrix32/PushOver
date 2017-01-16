@@ -10,7 +10,7 @@ public class Platform : LevelObject {
 		playOnce (anim.id);
 
 		BoxCollider2D collider = gameObject.AddComponent<BoxCollider2D> ();
-		collider.size = new Vector2 ( collider.size.x, collider.size.y / 2);
+		collider.offset = new Vector2 (getBounds().width / 2, - getBounds().height / 2);
+		collider.size = new Vector2 ( getBounds().width, getBounds().height / 2);
 	}
-
 }

@@ -12,11 +12,25 @@ public class PushOverScene : kScene
 	public Platform 	m_platformTemplate;
 	public Ladder 		m_ladderTemplate;
 
+	public Ant m_ant;
+
 	public List<TextAsset> m_sourceLevels;
 
+	public List<Level>	m_levels = new List<Level>();
+
+	protected override void onInit(){
+		base.onInit ();
+
+		if (!Application.isPlaying)
+			return;
+
+		m_levels [0].StartLevel(m_ant);
+	}
+
 	public void LoadScene(){
-		for(int i = 0; i < m_sourceLevels.Count;i++ )
-			ImportLevelFromFile( i + 1, m_sourceLevels[i]);
+		//for(int i = 0; i < m_sourceLevels.Count;i++ )
+		//	ImportLevelFromFile( i + 1, m_sourceLevels[i]);
+		ImportLevelFromFile( 6, m_sourceLevels[5]);
 	}
 
 	public void ImportLevelFromFile(int levelIndex,TextAsset sourceLevel)
@@ -115,17 +129,10 @@ public class PushOverScene : kScene
 				}
 			}
 		}
+		level.SetupPathfinding (new Vector2(10,10));
+		level.gameObject.SetActive (false);
 
-		//			ObjectClass newObject = new ObjectClass(DataController.m_objects,"BKG_LVL"+level);//"Object"+m_sprite.getSObjects().size());
-		//			DataController.m_objects.add(newObject);
-		//			ObjectClass.ObjectState objState = newObject.new ObjectState(DataController.m_objects,"STATE_IDLE",bkgFrame);//toEditorSpace(new Point(x,y))));
-		//			newObject.getComponents().add(objState);
-
-		//			Layer newStage = (Layer)DataController.m_scene.get(Layer.ITEM_TYPE_FLAG,"LEVEL_"+level);
-		//			Layer.LayerObject aComp = 	newStage.new LayerObject(DataController.m_scene ,"A",
-		//				newObject,new Point(0,0),1.0f);
-		//			newStage.getComponents().insertElementAt(aComp, 0);
-		//level.gameObject.SetActive (false);
+		m_levels.Add (level);
 	}
 
 	private void ReadLevelObjects(Level level, string[] lines){
@@ -227,25 +234,23 @@ public class PushOverScene : kScene
 					bool platformLeft  = x <= 0		|| PushOverLevelConstants.IsDominoChar(lines[y][x - 1]) || lines[y][x - 1] == '\\';
 					bool platformRight = x + 1 >= 20|| PushOverLevelConstants.IsDominoChar(lines[y][x + 1]) || lines[y][x + 1] == '/';
 
-					string platform = null;
-					if (ladderBelow)
-						platform = "Platform_Ladder_Down";
-					else if (ladderAbove)
-						platform = "Platform_Ladder_Up";
-					else if (!platformLeft && !platformRight)
-						platform = "Platform_Strip";
+					if (ladderBelow) {
+						//platform = "Platform_Ladder_Down";
+						level.AddObject (m_platformTemplate, "Platform_Middle", x * PushOverLevelConstants.tileW, y * PushOverLevelConstants.tileH);
+						level.AddObject (m_ladderTemplate, "Ladder", x * PushOverLevelConstants.tileW, y * PushOverLevelConstants.tileH);
+					} else if (ladderAbove) {
+						//platform = "Platform_Ladder_Up";
+						level.AddObject (m_platformTemplate, "Platform_Middle", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
+						level.AddObject (m_ladderTemplate, "Ladder", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
+					}else if (!platformLeft && !platformRight)
+						level.AddObject (m_platformTemplate, "Platform_Strip", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
 					else if (!platformLeft)
-						platform = "Platform_Start";
+						level.AddObject (m_platformTemplate, "Platform_Start", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
 					else if (!platformRight)
-						platform = "Platform_End";
+						level.AddObject (m_platformTemplate, "Platform_End", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
 					else
-						platform = "Platform_Middle";
-
-					if(platform != null)
-					{
-						level.AddObject (m_platformTemplate, platform, x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
-					} 
-
+						level.AddObject (m_platformTemplate, "Platform_Middle", x * PushOverLevelConstants.tileW,y * PushOverLevelConstants.tileH);
+				
 					if(domino != null)
 					{
 						level.AddObject (m_dominoTemplate, domino, (x + 1) * PushOverLevelConstants.tileW - dominoXOFf, y * PushOverLevelConstants.tileH - dominoYOFf);
