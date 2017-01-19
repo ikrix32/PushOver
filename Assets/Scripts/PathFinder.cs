@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿//#define DEBUG_PATH_FINDING
+using UnityEngine;
 using System.Collections;
 using System;
 using System.Collections.Generic;
@@ -19,22 +20,15 @@ public class PathFinder : kBehaviourScript {
 	public bool m_debugLevelMap;
 	public bool m_debugMoveMatrix;
 
-	private List<IntVector2> m_path = new List<IntVector2> ();
+	public XPath m_path = new XPath();
 
-	public void Path(Vector2 from,Vector2 to){
+	public List<XPath> m_paths = new List<XPath> ();
+
+	public void FindPath(Vector2 from,Vector2 to){
 		IntVector2 fromCell = FindReachableCell (from,3,3);
 		IntVector2 toCell = FindReachableCell (to,4,3);
 
-		m_path = findPath (fromCell, toCell);
-
-		if (m_path != null) {
-			Debug.Log ("Found path from " + fromCell + " to " + toCell + ".");
-		} else {
-			m_path = new List<IntVector2> ();
-			m_path.Add (fromCell);
-			m_path.Add (toCell);
-			Debug.Log ("Can't find path from " + fromCell + " to " + toCell + ".");
-		}
+		FindPathNew (fromCell, toCell);
 	}
 
 	private IntVector2 FindReachableCell(Vector2 pos,int downTol,int upTol){
@@ -55,8 +49,102 @@ public class PathFinder : kBehaviourScript {
 		return cell;
 	}
 
-	public List <IntVector2> findPath( IntVector2 from, IntVector2 to) 
+	IntVector2 m_pStart;
+	IntVector2 m_pEnd;
+	public void FindPathNew( IntVector2 from, IntVector2 to) 
 	{
+		m_path.Clear ();
+		m_pStart = from;
+		m_pEnd = to;
+
+		#if DEBUG_PATH_FINDING
+		StartCoroutine (recursePath(from,to));
+		#else
+		recursePath(from,to);
+		#endif
+
+		//remove dangerous paths
+		for(int i = 0; i < m_paths.Count; i++){
+			int noFallCells = 0;
+			for (int j = 0; j < m_paths [i].Size; j++) {
+				IntVector2 cell = m_paths [i].Get (j);
+				if (canPassDown (cell) && !canPassUp (cell)) {
+					noFallCells++;
+					if (noFallCells > 7) {
+					
+					}
+				} else {
+					noFallCells = 0;
+				}
+			}
+		}
+	}
+
+	#if DEBUG_PATH_FINDING
+	private IEnumerator recursePath(IntVector2 current, IntVector2 to) {
+		yield return null;
+	#else
+	private void recursePath(IntVector2 current, IntVector2 to) {
+	#endif
+		m_path.Push (current);
+
+		if(current.x == to.x && current.y == to.y) {
+			// arrived at destination
+			m_paths.Add (new XPath(m_path));
+		}
+		else {
+			if (canPassLeft (current)) {
+				IntVector2 left = new IntVector2 (current.x - 1, current.y);
+				if (!m_path.Contains (left)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (left, to));
+					#else
+					recursePath ( left, to);
+					#endif
+				}// else cannot go this way
+			}
+
+			if (canPassRight (current)) {
+				IntVector2 right = new IntVector2 (current.x + 1, current.y);
+				if (!m_path.Contains (right)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (right, to));
+					#else
+					recursePath ( right, to);
+					#endif
+				}// else cannot go this way
+			}
+
+			if (canPassDown (current)) {
+				IntVector2 down = new IntVector2 (current.x, current.y - 1);
+				if (!m_path.Contains (down)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (down, to));
+					#else
+					recursePath (down, to);
+					#endif
+				}//else cannot go this way
+			}
+
+			if (canPassUp (current)) {
+				IntVector2 up = new IntVector2 (current.x, current.y + 1);
+				if (!m_path.Contains (up)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (up, to));
+					#else
+					recursePath (up, to);
+					#endif
+				}//else cannot go this way
+			}
+		}
+
+		m_path.Pop();
+	}
+
+	
+	public List <IntVector2> findPath1( IntVector2 from, IntVector2 to) 
+	{
+		/*
 		//Debug.LogError("Find path from "+from.code+" to "+to.code);
 		List <IntVector2> output = new List <IntVector2>();
 
@@ -69,6 +157,7 @@ public class PathFinder : kBehaviourScript {
 			//Debug.LogError("Found path:");
 			return output;
 		}
+		*/
 		return null;
 	}
 
@@ -94,61 +183,45 @@ public class PathFinder : kBehaviourScript {
 			if (canPassLeft (current)) {
 				IntVector2 left = new IntVector2 (current.x - 1, current.y);
 				if (!path.Contains (left)) {
-					//Stack <QuestNode> currentPath = copyStack(path, segment.getDestination());
 					path.Push (left);
 					double pathDistance = recursePath (from, to, path, distance + 1, output, minimumDistance);
-
 					// save new minimum distance
 					minimumDistance = Math.Min (pathDistance, minimumDistance);
-
 					path.Pop ();
-				} else {// cannot go this way
-				}
+				}// else cannot go this way
 			}
 
 			if (canPassRight (current)) {
 				IntVector2 right = new IntVector2 (current.x + 1, current.y);
 				if (!path.Contains (right)) {
-					//Stack <QuestNode> currentPath = copyStack(path, segment.getDestination());
 					path.Push (right);
 					double pathDistance = recursePath (from, to, path, distance + 1, output, minimumDistance);
-
 					// save new minimum distance
 					minimumDistance = Math.Min (pathDistance, minimumDistance);
-
 					path.Pop ();
-				} else {// cannot go this way
-				}
+				}// else cannot go this way
 			}
 
 			if (canPassUp (current)) {
 				IntVector2 up = new IntVector2 (current.x, current.y + 1);
 				if (!path.Contains (up)) {
-					//Stack <QuestNode> currentPath = copyStack(path, segment.getDestination());
 					path.Push (up);
 					double pathDistance = recursePath (from, to, path, distance + 1, output, minimumDistance);
-
 					// save new minimum distance
 					minimumDistance = Math.Min (pathDistance, minimumDistance);
-
 					path.Pop ();
-				} else {// cannot go this way
-				}
+				}//else cannot go this way
 			}
 
 			if (canPassDown (current)) {
 				IntVector2 down = new IntVector2 (current.x, current.y - 1);
 				if (!path.Contains (down)) {
-					//Stack <QuestNode> currentPath = copyStack(path, segment.getDestination());
 					path.Push (down);
 					double pathDistance = recursePath (from, to, path, distance + 1, output, minimumDistance);
-
 					// save new minimum distance
 					minimumDistance = Math.Min (pathDistance, minimumDistance);
-
 					path.Pop ();
-				} else {// cannot go this way
-				}
+				}//else cannot go this way
 			}
 
 			return minimumDistance;
@@ -177,8 +250,7 @@ public class PathFinder : kBehaviourScript {
 	}
 
 	protected void MapObjects(LevelObject[] objects){
-		Rect gridBounds = new Rect (	transform.position.x,
-										transform.position.y - m_gridSize.y * m_cellSize.y,
+		Rect gridBounds = new Rect (	transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y,
 										m_gridSize.x * m_cellSize.x, m_gridSize.y * m_cellSize.y);
 
 		Vector2 cellTollerance = new Vector2(0.2f * m_cellSize.x, 0.2f * m_cellSize.y);
@@ -192,21 +264,16 @@ public class PathFinder : kBehaviourScript {
 			float gBottom 	= (objectBounds.y - gridBounds.y) / m_cellSize.y;
 
 			int gridLeftCell	= Mathf.FloorToInt(gLeft);
-			if (gLeft - gridLeftCell >= 0.7f)	gridLeftCell += 1;
+			if (gLeft - gridLeftCell >= 0.6f)	gridLeftCell += 1;
 			
 			int gridRightCell 	= Mathf.FloorToInt(gRight);
-			if (gRight - gridRightCell <= 0.3f)	gridRightCell -= 1;
+			if (gRight - gridRightCell <= 0.4f)	gridRightCell -= 1;
 
 			int gridBottomCell 	= Mathf.FloorToInt(gBottom);
-			if (gBottom - gridBottomCell >= 0.7f)gridBottomCell += 1;
+			if (gBottom - gridBottomCell >= 0.6f)gridBottomCell += 1;
 			
 			int gridTopCell 	= Mathf.FloorToInt(gTop);
-			if (gTop - gridTopCell <= 0.3f)	gridTopCell -= 1;
-
-			Debug.Log ("GRID"+" [ x:"+gridBounds.x+",y:"+gridBounds.y+",w:"+gridBounds.width+",h:"+gridBounds.height);
-			Debug.Log (""+objects[i].name+" [x:"+objectBounds.x+",y:"+objectBounds.y+",w:"+objectBounds.width+",h:"+objectBounds.height);
-			Debug.Log ("Cells: x:[ left:" + gLeft+" -> "+gridLeftCell +", right:"+gRight+" -> "+gridRightCell+"]\n y:[ top:"+
-				gBottom+" -> " + gridBottomCell+", bottom:" + gTop + " -> " + gridTopCell+"]");
+			if (gTop - gridTopCell <= 0.4f)	gridTopCell -= 1;
 
 			if(	gridLeftCell < m_gridSize.x && gridRightCell >= 0
 				&&	gridBottomCell  < m_gridSize.y && gridTopCell >= 0){
@@ -216,10 +283,14 @@ public class PathFinder : kBehaviourScript {
 				gridBottomCell = gridBottomCell < 0 ? 0 : gridBottomCell;
 				gridTopCell = gridTopCell >= m_gridSize.y ? (int)m_gridSize.y - 1 : gridTopCell;
 
-				for (int x = gridLeftCell; x <= gridRightCell; x++) {
-					for (int y = gridBottomCell; y <= gridTopCell; y++) {
-						m_grid [ x, y] = objects[i].type;
-					}
+				if (objects [i].type == LevelObject.Type.Ladder) {
+					int xM = gridLeftCell + (gridRightCell - gridLeftCell) / 2;
+					for (int y = gridBottomCell; y <= gridTopCell; y++)
+						m_grid [xM, y] = objects [i].type;
+				} else {
+					for (int x = gridLeftCell; x <= gridRightCell; x++)
+						for (int y = gridBottomCell; y <= gridTopCell; y++) 
+							m_grid [x, y] = objects [i].type;
 				}
 			}
 		}
@@ -228,57 +299,71 @@ public class PathFinder : kBehaviourScript {
 	protected void ComputeMoveMatrix(){
 		m_moveMatrix = new int[ m_gridSize.x, m_gridSize.y];
 
-		for(int y = (int)m_gridSize.y - 1; y > 0; y--){
-			for(int x = 0; x < m_gridSize.x; x++){
-				if(m_grid[ x, y] != LevelObject.Type.Platform){
-					if(m_grid[ x, y] == LevelObject.Type.Ladder ){
-						m_moveMatrix[ x, y] |= MOVE_UP_DIR | MOVE_DOWN_DIR;
-					}
+		for(int y = (int)m_gridSize.y - 1; y >= 0; y--){
+			for(int x = 0; x < m_gridSize.x; x++)
+			{
+				if(m_grid[ x, y] == LevelObject.Type.Ladder )
+				{
+					m_moveMatrix[ x, y] |= MOVE_UP_DIR | MOVE_DOWN_DIR;
 
-					if(isWalkableCell(x,y)){
-						m_moveMatrix[ x, y] |= MOVE_LEFT_DIR | MOVE_RIGHT_DIR;
+					if(x > 0 && isWalkableCell( x - 1, y))
+						m_moveMatrix[ x, y] |= MOVE_LEFT_DIR;
 
-						if(m_grid[x , y + 1] == LevelObject.Type.Ladder)
-							m_moveMatrix[ x, y] |= MOVE_DOWN_DIR;
-					}else if(isFallCell(x,y)){
+					if(x < m_gridSize.x - 1 && isWalkableCell( x + 1, y))
+						m_moveMatrix[ x, y] |= MOVE_RIGHT_DIR;
+				}
+
+				if(isWalkableCell(x,y))
+				{
+					m_moveMatrix[ x, y] |= MOVE_LEFT_DIR | MOVE_RIGHT_DIR;
+
+					if(y > 0 && m_grid[x , y - 1] == LevelObject.Type.Ladder)
 						m_moveMatrix[ x, y] |= MOVE_DOWN_DIR;
-					}
+					
+					if(y < m_gridSize.y - 1 && m_grid[x , y + 1] == LevelObject.Type.Ladder)
+						m_moveMatrix[ x, y] |= MOVE_UP_DIR;
+				}else if(isFallCell(x,y)){
+					m_moveMatrix[ x, y] |= MOVE_DOWN_DIR;
 				}
 			}
 		}
 	}
 
 	protected bool isWalkableCell(int x,int y){
-		if(y > 0){	
-			if(m_grid[ x , y - 1] == LevelObject.Type.Platform 
-			|| m_grid[ x , y - 1] == LevelObject.Type.Ladder)
+		if (m_grid [x, y] == LevelObject.Type.Platform)
+			return false;
+		
+		if(y > 0 ){	
+			if(m_grid[ x , y] != LevelObject.Type.Ladder 
+			&&(m_grid[ x , y - 1] == LevelObject.Type.Platform 
+			|| m_grid[ x , y - 1] == LevelObject.Type.Ladder))
 				return true;
 		}
 		return false;
 	}
 
 	protected bool isFallCell(int x,int y){
+		if (m_grid [x, y] == LevelObject.Type.Platform)
+			return false;
+		
 		IntVector2 topCell = new IntVector2 (x, y + 1);
 		if((y < m_gridSize.y - 1 && (canPassDown(topCell) && !canPassUp(topCell))) 
-			||  (x > 0 && m_grid[x - 1, y] == LevelObject.Type.Platform)
-			|| 	(x < m_gridSize.x - 1 && m_grid[x + 1, y] == LevelObject.Type.Platform))
+		|| (x > 0 && m_grid[x - 1, y] == LevelObject.Type.Platform)
+		|| (x < m_gridSize.x - 1 && m_grid[x + 1, y] == LevelObject.Type.Platform))
 			return true;
 
-		//if((x <= 0 || (m_grid[ x - 1, y] != LevelObject.Type.Platform && m_grid[ x - 1, y] != LevelObject.Type.Ladder))
-		//&& (x >= m_gridSize.x - 1 || (m_grid[ x + 1, y] != LevelObject.Type.Platform && m_grid[ x + 1, y] != LevelObject.Type.Ladder)))
-		{
-			if(x > 0){
-				if(m_grid[ x - 1, y - 1] == LevelObject.Type.Platform)
-				//|| m_grid[ x - 1, y - 1] == LevelObject.Type.Ladder)
-					return true;
-			}
-
-			if(x < m_gridSize.x - 1){
-				if(m_grid[ x + 1, y - 1] == LevelObject.Type.Platform)
-				//|| m_grid[ x + 1, y - 1] == LevelObject.Type.Ladder)
-					return true;
-			}
+		if(x > 0 && y > 0){
+			if(m_grid[ x - 1, y - 1] == LevelObject.Type.Platform)
+			//|| m_grid[ x - 1, y - 1] == LevelObject.Type.Ladder)
+				return true;
 		}
+
+		if(y > 0 && x < m_gridSize.x - 1){
+			if(m_grid[ x + 1, y - 1] == LevelObject.Type.Platform)
+			//|| m_grid[ x + 1, y - 1] == LevelObject.Type.Ladder)
+				return true;
+		}
+
 		return false;
 	}
 
@@ -287,19 +372,19 @@ public class PathFinder : kBehaviourScript {
 	}
 
 	public bool canPassLeft( IntVector2 cell){
-		return (m_moveMatrix[cell.x,cell.y] & MOVE_LEFT_DIR) != 0;
+		return cell.x > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_LEFT_DIR) != 0;
 	}
 
 	public bool canPassRight( IntVector2 cell){
-		return (m_moveMatrix[cell.x,cell.y] & MOVE_RIGHT_DIR) != 0;
+		return cell.x < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_RIGHT_DIR) != 0;
 	}
 
 	public bool canPassUp( IntVector2 cell){
-		return (m_moveMatrix[cell.x,cell.y] & MOVE_UP_DIR) != 0;
+		return cell.y < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_UP_DIR) != 0;
 	}
 
 	public bool canPassDown( IntVector2 cell){
-		return (m_moveMatrix[cell.x,cell.y] & MOVE_DOWN_DIR) != 0;
+		return cell.y > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_DOWN_DIR) != 0;
 	}
 
 	#if UNITY_EDITOR	
@@ -353,7 +438,7 @@ public class PathFinder : kBehaviourScript {
 							Gizmos.color = green;
 							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 
-							drawArrows( pos, cell);
+							DrawArrows( pos, cell);
 						} else {
 							//Gizmos.color = red;
 							//Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
@@ -363,19 +448,44 @@ public class PathFinder : kBehaviourScript {
 			}
 		}
 
-		if (m_path != null && m_path.Count > 0) 
+		for (int i = 0; i < m_paths.Count; i++) {
+			DrawPath (m_paths[i],m_colors[i]);
+		}
+
+		DrawPath (m_path,new Color(1,1,0,0.8f));
+
+		Vector3 start = new Vector3 (	transform.position.x + m_pStart.x * m_cellSize.x + m_pStart.x / 2, 
+										transform.position.y - height + m_pStart.y * m_cellSize.y + m_cellSize.y / 2, 
+										transform.position.z);
+		Gizmos.color = Color.red;
+		Gizmos.DrawCube (start, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+	
+		Vector3 end = new Vector3 (	transform.position.x + m_pEnd.x * m_cellSize.x + m_pEnd.x / 2, 
+									transform.position.y - height + m_pEnd.y * m_cellSize.y + m_cellSize.y / 2, 
+									transform.position.z);
+		Gizmos.color = Color.red;
+		Gizmos.DrawCube (end, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+	}
+
+	public Color[] m_colors;
+
+	void DrawPath(XPath path, Color col)
+	{
+		float height= m_gridSize.y * m_cellSize.y; 
+		if (path != null) 
 		{
-			for (int i = 0; i < m_path.Count; i++) {
-				Vector3 pos = new Vector3 (	transform.position.x + m_path[i].x * m_cellSize.x + m_cellSize.x / 2, 
-											transform.position.y - height + m_path[i].y * m_cellSize.y + m_cellSize.y / 2, 
-					           				transform.position.z);
-				Gizmos.color = Color.blue;
+			for (int i = 0; i < path.Size; i++) {
+				IntVector2 waipoint = path.Get (i);
+				Vector3 pos = new Vector3 (	transform.position.x + waipoint.x * m_cellSize.x + m_cellSize.x / 2, 
+											transform.position.y - height + waipoint.y * m_cellSize.y + m_cellSize.y / 2, 
+											transform.position.z);
+				Gizmos.color = col;
 				Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 			}
 		}
 	}
 
-	void drawArrows(Vector3 pos,IntVector2 cell){
+	void DrawArrows(Vector3 pos,IntVector2 cell){
 		float arrowSize = m_cellSize.x / 2;
 		float arrowTail = arrowSize * 0.75f;
 		float arrowHead = arrowSize * 0.25f;
@@ -410,7 +520,6 @@ public class PathFinder : kBehaviourScript {
 			Gizmos.DrawLine( p1 + Vector3.right * arrowHead, p1 + Vector3.up * arrowHead);
 			Gizmos.DrawLine( p1 + Vector3.left * arrowHead, p1 + Vector3.right * arrowHead);
 		}
-
 
 		if(canPassDown(cell)){
 			Gizmos.color = Color.red;

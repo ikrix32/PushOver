@@ -60,7 +60,7 @@ public class Level : kBehaviourScript {
 
 	protected void TouchPressed(Touch t){
 		//Debug.LogError ("Touch pressed at pos:"+t.position);
-		m_finder.Path ( m_ant.transform.position, t.position);
+		m_finder.FindPath ( m_ant.transform.position, t.position);
 	}
 
 	protected void TouchReleased(Touch t){

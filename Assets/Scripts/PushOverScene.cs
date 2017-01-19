@@ -129,7 +129,7 @@ public class PushOverScene : kScene
 				}
 			}
 		}
-		level.SetupPathfinding (new Vector2(10,10));
+		level.SetupPathfinding (new Vector2(20,20));
 		level.gameObject.SetActive (false);
 
 		m_levels.Add (level);
