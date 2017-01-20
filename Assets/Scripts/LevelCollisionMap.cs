@@ -1,0 +1,467 @@
+﻿//#define DEBUG_PATH_FINDING
+using UnityEngine;
+using System.Collections;
+using System;
+using System.Collections.Generic;
+
+public class LevelCollisionMap : kBehaviourScript {
+	//4 bits for move dir
+	public static int MOVE_LEFT_DIR		= 1 << 0;
+	public static int MOVE_RIGHT_DIR	= 1 << 1;
+	public static int MOVE_UP_DIR 		= 1 << 2;
+	public static int MOVE_DOWN_DIR 	= 1 << 3;
+
+	public IntVector2 m_gridSize = new IntVector2(2,2);
+	public Vector2 	  m_cellSize = new Vector2(10,10);
+
+	protected LevelObject.Type[,] m_grid;
+	protected int[,] m_moveMatrix;
+
+	public bool m_debugLevelMap;
+	public bool m_debugMoveMatrix;
+
+	public XPath m_path = new XPath();
+
+	public List<XPath> m_paths = new List<XPath> ();
+
+	public XPath FindPath(Vector2 from,Vector2 to){
+		IntVector2 fromCell = FindReachableCell (from,3,3);
+		IntVector2 toCell = FindReachableCell (to,4,3);
+
+		FindPathNew (fromCell, toCell);
+
+		if (m_paths.Count > 0)
+			return m_paths [0];
+
+		return null;
+	}
+
+	private IntVector2 FindReachableCell(Vector2 pos,int vTollerance,int hTollerance){
+		IntVector2 cell = PosToCell (pos);
+		for (int i = 0; i < vTollerance; i++) {
+			if(m_moveMatrix[cell.x,cell.y - i] != 0){
+				cell.y -= i;
+				return cell;
+			}
+			if(m_moveMatrix[cell.x,cell.y + i] != 0){
+				cell.y += i;
+				return cell;
+			}
+		}
+
+		for (int i = 0; i < hTollerance; i++) {
+			if(m_moveMatrix[cell.x - i,cell.y] != 0){
+				cell.x -= i;
+				return cell;
+			}
+			if(m_moveMatrix[cell.x + i,cell.y] != 0){
+				cell.x += i;
+				return cell;
+			}
+		}
+		return cell;
+	}
+
+	IntVector2 m_pStart;
+	IntVector2 m_pEnd;
+	public void FindPathNew( IntVector2 from, IntVector2 to) 
+	{
+		m_path.Clear ();
+		m_pStart = from;
+		m_pEnd = to;
+
+		#if DEBUG_PATH_FINDING
+		StartCoroutine (recursePath(from,to));
+		#else
+		recursePath(from,to);
+		#endif
+
+		/*List<int> toRemove = new List<int> ();
+
+		//remove dangerous paths
+		for(int i = 0; i < m_paths.Count; i++){
+			int noFallCells = 0;
+			for (int j = 0; j < m_paths [i].Size; j++) {
+				IntVector2 cell = m_paths [i].Get (j);
+				if (canPassDown (cell) && !canPassUp (cell)) {
+					noFallCells++;
+					if (noFallCells > 7) {
+						toRemove.Add (i);
+						j = m_paths [i].Size;//go to next path
+					}
+				} else
+					noFallCells = 0;
+			}
+		}
+
+		for (int i = toRemove.Count - 1; i >= 0; i--)
+			m_paths.RemoveAt (toRemove[i]);
+
+		Debug.LogError ("Remaining paths "+m_paths.Count);*/
+	}
+
+	#if DEBUG_PATH_FINDING
+	private IEnumerator recursePath(IntVector2 current, IntVector2 to) {
+		yield return null;
+	#else
+	private void recursePath(IntVector2 current, IntVector2 to) {
+	#endif
+		m_path.Push (current);
+
+		if(current.x == to.x && current.y == to.y) {
+			// arrived at destination
+			m_paths.Add (new XPath(m_path));
+		}else {
+			if (canPassLeft (current)) {
+				IntVector2 left = new IntVector2 (current.x - 1, current.y);
+				if (!m_path.Contains (left)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (left, to));
+					#else
+					recursePath ( left, to);
+					#endif
+				}// else cannot go this way
+			}
+
+			if (canPassRight (current)) {
+				IntVector2 right = new IntVector2 (current.x + 1, current.y);
+				if (!m_path.Contains (right)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (right, to));
+					#else
+					recursePath ( right, to);
+					#endif
+				}// else cannot go this way
+			}
+
+			if (canPassDown (current)) {
+				IntVector2 down = new IntVector2 (current.x, current.y - 1);
+				if (!m_path.Contains (down)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (down, to));
+					#else
+					recursePath (down, to);
+					#endif
+				}//else cannot go this way
+			}
+
+			if (canPassUp (current)) {
+				IntVector2 up = new IntVector2 (current.x, current.y + 1);
+				if (!m_path.Contains (up)) {
+					#if DEBUG_PATH_FINDING
+					yield return StartCoroutine(recursePath (up, to));
+					#else
+					recursePath (up, to);
+					#endif
+				}//else cannot go this way
+			}
+		}
+
+		m_path.Pop();
+	}
+
+	private IntVector2 PosToCell(Vector2 pos){
+		Vector2 gridPos = new Vector2 (transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y);
+
+		float cellX	= (pos.x - gridPos.x) / m_cellSize.x;
+		float cellY = (pos.y - gridPos.y) / m_cellSize.y;
+
+		return new IntVector2 (Mathf.RoundToInt (cellX), Mathf.RoundToInt (cellY));
+	}
+
+	public void Scan()
+	{
+		m_grid = new LevelObject.Type[ m_gridSize.x, m_gridSize.y];
+
+		Platform[] platforms = gameObject.GetComponentsInChildren<Platform>();
+		Ladder[] ladders	 = gameObject.GetComponentsInChildren<Ladder>();
+
+		MapObjects (platforms);
+		MapObjects (ladders);
+		ComputeMoveMatrix();
+	}
+
+	protected void MapObjects(LevelObject[] objects){
+		Rect gridBounds = new Rect (	transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y,
+										m_gridSize.x * m_cellSize.x, m_gridSize.y * m_cellSize.y);
+
+		Vector2 cellTollerance = new Vector2(0.2f * m_cellSize.x, 0.2f * m_cellSize.y);
+		for (int i = 0; i < objects.Length; i++) {
+			Rect objectBounds = objects [i].getBoundsWorld ();
+
+			float gLeft	= (objectBounds.x - gridBounds.x) / m_cellSize.x;
+			float gRight = (objectBounds.x + objectBounds.width - gridBounds.x) / m_cellSize.x;
+
+			float gTop 		= (objectBounds.y + objectBounds.height - gridBounds.y) / m_cellSize.y;
+			float gBottom 	= (objectBounds.y - gridBounds.y) / m_cellSize.y;
+
+			int gridLeftCell	= Mathf.FloorToInt(gLeft);
+			if (gLeft - gridLeftCell >= 0.6f)	gridLeftCell += 1;
+			
+			int gridRightCell 	= Mathf.FloorToInt(gRight);
+			if (gRight - gridRightCell <= 0.4f)	gridRightCell -= 1;
+
+			int gridBottomCell 	= Mathf.FloorToInt(gBottom);
+			if (gBottom - gridBottomCell >= 0.6f)gridBottomCell += 1;
+			
+			int gridTopCell 	= Mathf.FloorToInt(gTop);
+			if (gTop - gridTopCell <= 0.4f)	gridTopCell -= 1;
+
+			if(	gridLeftCell < m_gridSize.x && gridRightCell >= 0
+				&&	gridBottomCell  < m_gridSize.y && gridTopCell >= 0){
+				gridLeftCell = gridLeftCell < 0 ? 0 : gridLeftCell;
+				gridRightCell = gridRightCell >= m_gridSize.x ? (int)m_gridSize.x - 1 : gridRightCell;
+
+				gridBottomCell = gridBottomCell < 0 ? 0 : gridBottomCell;
+				gridTopCell = gridTopCell >= m_gridSize.y ? (int)m_gridSize.y - 1 : gridTopCell;
+
+				if (objects [i].type == LevelObject.Type.Ladder) {
+					int xM = gridLeftCell + (gridRightCell - gridLeftCell) / 2;
+					for (int y = gridBottomCell; y <= gridTopCell; y++)
+						m_grid [xM, y] = objects [i].type;
+				} else {
+					for (int x = gridLeftCell; x <= gridRightCell; x++)
+						for (int y = gridBottomCell; y <= gridTopCell; y++) 
+							m_grid [x, y] = objects [i].type;
+				}
+			}
+		}
+	}
+
+	protected void ComputeMoveMatrix(){
+		m_moveMatrix = new int[ m_gridSize.x, m_gridSize.y];
+
+		for(int y = (int)m_gridSize.y - 1; y >= 0; y--){
+			for(int x = 0; x < m_gridSize.x; x++)
+			{
+				if(m_grid[ x, y] == LevelObject.Type.Ladder )
+				{
+					m_moveMatrix[ x, y] |= MOVE_UP_DIR | MOVE_DOWN_DIR;
+
+					if(x > 0 && isWalkableCell( x - 1, y))
+						m_moveMatrix[ x, y] |= MOVE_LEFT_DIR;
+
+					if(x < m_gridSize.x - 1 && isWalkableCell( x + 1, y))
+						m_moveMatrix[ x, y] |= MOVE_RIGHT_DIR;
+				}
+
+				if(isWalkableCell(x,y))
+				{
+					m_moveMatrix[ x, y] |= MOVE_LEFT_DIR | MOVE_RIGHT_DIR;
+
+					if(y > 0 && m_grid[x , y - 1] == LevelObject.Type.Ladder)
+						m_moveMatrix[ x, y] |= MOVE_DOWN_DIR;
+					
+					if(y < m_gridSize.y - 1 && m_grid[x , y + 1] == LevelObject.Type.Ladder)
+						m_moveMatrix[ x, y] |= MOVE_UP_DIR;
+				}else if(isFallCell(x,y)){
+					m_moveMatrix[ x, y] |= MOVE_DOWN_DIR;
+				}
+			}
+		}
+	}
+
+	protected bool isWalkableCell(int x,int y){
+		if (m_grid [x, y] == LevelObject.Type.Platform)
+			return false;
+		
+		if(y > 0 ){	
+			if(m_grid[ x , y] != LevelObject.Type.Ladder 
+			&&(m_grid[ x , y - 1] == LevelObject.Type.Platform 
+			|| m_grid[ x , y - 1] == LevelObject.Type.Ladder))
+				return true;
+		}
+		return false;
+	}
+
+	protected bool isFallCell(int x,int y){
+		if (m_grid [x, y] == LevelObject.Type.Platform)
+			return false;
+		
+		IntVector2 topCell = new IntVector2 (x, y + 1);
+		if((y < m_gridSize.y - 1 && (canPassDown(topCell) && !canPassUp(topCell))) 
+		|| (x > 0 && m_grid[x - 1, y] == LevelObject.Type.Platform)
+		|| (x < m_gridSize.x - 1 && m_grid[x + 1, y] == LevelObject.Type.Platform))
+			return true;
+
+		if(x > 0 && y > 0){
+			if(m_grid[ x - 1, y - 1] == LevelObject.Type.Platform)
+			//|| m_grid[ x - 1, y - 1] == LevelObject.Type.Ladder)
+				return true;
+		}
+
+		if(y > 0 && x < m_gridSize.x - 1){
+			if(m_grid[ x + 1, y - 1] == LevelObject.Type.Platform)
+			//|| m_grid[ x + 1, y - 1] == LevelObject.Type.Ladder)
+				return true;
+		}
+
+		return false;
+	}
+
+	public bool canPass( IntVector2 cell){
+		return m_moveMatrix[cell.x,cell.y] != 0;
+	}
+
+	public bool canPassLeft( IntVector2 cell){
+		return cell.x > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_LEFT_DIR) != 0;
+	}
+
+	public bool canPassRight( IntVector2 cell){
+		return cell.x < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_RIGHT_DIR) != 0;
+	}
+
+	public bool canPassUp( IntVector2 cell){
+		return cell.y < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_UP_DIR) != 0;
+	}
+
+	public bool canPassDown( IntVector2 cell){
+		return cell.y > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_DOWN_DIR) != 0;
+	}
+
+	#if UNITY_EDITOR	
+	static Color red = new Color(1,0,0,0.3f);
+	static Color green = new Color(0,1,0,0.5f);
+	static Color gray = new Color(0.7f,0.7f,0.7f,0.1f);
+	static Color blue = new Color(0,0,1,0.3f);
+
+	void OnDrawGizmos(){
+		float width = m_gridSize.x * m_cellSize.x; 
+		float height= m_gridSize.y * m_cellSize.y; 
+
+		if(m_debugLevelMap){
+			Gizmos.color = Color.white;
+			Gizmos.DrawWireCube(	transform.position + Vector3.right * width / 2 + Vector3.down * height / 2,
+									new Vector3(m_gridSize.x * m_cellSize.x, m_gridSize.y * m_cellSize.y, 2));
+
+			if (m_grid != null) {
+				for (int y = 0; y < m_gridSize.y; y++) {
+					for (int x = 0; x < m_gridSize.x; x++) {
+						Vector3 pos = new Vector3 (	transform.position.x + x * m_cellSize.x + m_cellSize.x/2, 
+													transform.position.y - height + y * m_cellSize.y + m_cellSize.y/2, 
+													transform.position.z);
+
+						if (m_grid [x, y] == LevelObject.Type.Platform) {
+							Gizmos.color = red;
+							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+						} else if (m_grid [x, y] == LevelObject.Type.Ladder) {
+							Gizmos.color = blue;
+							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+						} else {
+							Gizmos.color = gray;
+							Gizmos.DrawWireCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+						}
+					}
+				}
+			}
+		}
+
+		if(m_debugMoveMatrix){
+			if (m_moveMatrix != null) {
+				IntVector2 cell = new IntVector2 (0, 0);
+				for (int y = 0; y < m_gridSize.y; y++) {
+					for (int x = 0; x < m_gridSize.x; x++) {
+						Vector3 pos = new Vector3 (	transform.position.x + x * m_cellSize.x + m_cellSize.x/2, 
+													transform.position.y - height + y * m_cellSize.y + m_cellSize.y/2, 
+													transform.position.z);
+						cell.x = x;
+						cell.y = y;
+						if (canPass(cell)) {
+							Gizmos.color = green;
+							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+
+							DrawArrows( pos, cell);
+						} else {
+							//Gizmos.color = red;
+							//Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+						}
+					}
+				}
+			}
+		}
+
+		for (int i = 0; i < m_paths.Count; i++) {
+			DrawPath (m_paths[i],m_colors[i]);
+		}
+
+		DrawPath (m_path,new Color(1,1,0,0.8f));
+
+		Vector3 start = new Vector3 (	transform.position.x + m_pStart.x * m_cellSize.x + m_pStart.x / 2, 
+										transform.position.y - height + m_pStart.y * m_cellSize.y + m_cellSize.y / 2, 
+										transform.position.z);
+		Gizmos.color = Color.red;
+		Gizmos.DrawCube (start, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+	
+		Vector3 end = new Vector3 (	transform.position.x + m_pEnd.x * m_cellSize.x + m_pEnd.x / 2, 
+									transform.position.y - height + m_pEnd.y * m_cellSize.y + m_cellSize.y / 2, 
+									transform.position.z);
+		Gizmos.color = Color.red;
+		Gizmos.DrawCube (end, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+	}
+
+	public Color[] m_colors;
+
+	void DrawPath(XPath path, Color col)
+	{
+		float height= m_gridSize.y * m_cellSize.y; 
+		if (path != null) 
+		{
+			for (int i = 0; i < path.Size; i++) {
+				IntVector2 waipoint = path.Get (i);
+				Vector3 pos = new Vector3 (	transform.position.x + waipoint.x * m_cellSize.x + m_cellSize.x / 2, 
+											transform.position.y - height + waipoint.y * m_cellSize.y + m_cellSize.y / 2, 
+											transform.position.z);
+				Gizmos.color = col;
+				Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
+			}
+		}
+	}
+
+	void DrawArrows(Vector3 pos,IntVector2 cell){
+		float arrowSize = m_cellSize.x / 2;
+		float arrowTail = arrowSize * 0.75f;
+		float arrowHead = arrowSize * 0.25f;
+
+		if(canPassLeft(cell)){
+			Gizmos.color = Color.white;
+
+			Vector3 p1 = pos + Vector3.left * arrowTail;
+			Gizmos.DrawLine( pos, p1);
+
+			Gizmos.DrawLine( p1 + Vector3.up * arrowHead , p1 + Vector3.left * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.down * arrowHead, p1 + Vector3.left * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.up * arrowHead, p1 + Vector3.down * arrowHead);
+		}
+
+		if(canPassRight(cell)){
+			Gizmos.color = Color.yellow;
+			Vector3 p1 = pos + Vector3.right * arrowTail;
+			Gizmos.DrawLine( pos, p1);
+
+			Gizmos.DrawLine( p1 + Vector3.up * arrowHead , p1 + Vector3.right * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.down * arrowHead, p1 + Vector3.right * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.up * arrowHead, p1 + Vector3.down * arrowHead);
+		}
+
+		if(canPassUp(cell)){
+			Gizmos.color = Color.green;
+			Vector3 p1 = pos + Vector3.up * arrowTail;
+			Gizmos.DrawLine( pos, p1);
+
+			Gizmos.DrawLine( p1 + Vector3.left * arrowHead , p1 + Vector3.up * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.right * arrowHead, p1 + Vector3.up * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.left * arrowHead, p1 + Vector3.right * arrowHead);
+		}
+
+		if(canPassDown(cell)){
+			Gizmos.color = Color.red;
+			Vector3 p1 = pos + Vector3.down * arrowTail;
+			Gizmos.DrawLine( pos, p1);
+
+			Gizmos.DrawLine( p1 + Vector3.left * arrowHead , p1 + Vector3.down * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.right * arrowHead, p1 + Vector3.down * arrowHead);
+			Gizmos.DrawLine( p1 + Vector3.left * arrowHead, p1 + Vector3.right * arrowHead);
+		}
+	}
+	#endif
+}

@@ -6,7 +6,7 @@ using System;
 
 public class Level : kBehaviourScript {
 
-	protected PathFinder m_finder;
+	protected LevelCollisionMap m_finder;
 
 	public kSpriteObject m_background;
 	public GameObject m_dominosRoot;
@@ -21,7 +21,7 @@ public class Level : kBehaviourScript {
 
 		m_ant.transform.position = m_enterDoor.transform.position + Vector3.down * 50;
 
-		m_finder = gameObject.GetComponent<PathFinder> ();
+		m_finder = gameObject.GetComponent<LevelCollisionMap> ();
 		m_finder.Scan ();
 
 		kTouchable touch = m_background.GetComponent<kTouchable> ();
@@ -68,7 +68,7 @@ public class Level : kBehaviourScript {
 	}
 
 	public void SetupPathfinding(Vector2 cellSize){
-		m_finder = gameObject.AddComponent<PathFinder> ();
+		m_finder = gameObject.AddComponent<LevelCollisionMap> ();
 		m_finder.m_cellSize = cellSize;
 
 		Rect bkgBounds = m_background.getBounds ();

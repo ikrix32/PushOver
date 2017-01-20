@@ -1,9 +1,9 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(PathFinder))]
+[CustomEditor(typeof(LevelCollisionMap))]
 [CanEditMultipleObjects]
-public class PathFinderEditor : Editor {
+public class LevelCollisionMapEditor : Editor {
 
 	void OnEnable () {
 	}
@@ -11,7 +11,7 @@ public class PathFinderEditor : Editor {
 	public override void OnInspectorGUI() {
 		DrawDefaultInspector ();
 
-		PathFinder finder = (PathFinder)target;
+		LevelCollisionMap finder = (LevelCollisionMap)target;
 		if(GUILayout.Button("Scan"))
 		{
 			finder.Scan();
