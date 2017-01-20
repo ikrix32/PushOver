@@ -1,5 +1,4 @@
-﻿//#define DEBUG_PATH_FINDING
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System;
 using System.Collections.Generic;
@@ -17,158 +16,22 @@ public class LevelCollisionMap : kBehaviourScript {
 	protected LevelObject.Type[,] m_grid;
 	protected int[,] m_moveMatrix;
 
+	private PathFinder m_pathFinder;
+
 	public bool m_debugLevelMap;
 	public bool m_debugMoveMatrix;
 
-	public XPath m_path = new XPath();
+	public LevelCollisionMap(){
+		m_pathFinder = new PathFinder (this);
+	}
 
-	public List<XPath> m_paths = new List<XPath> ();
-
-	public XPath FindPath(Vector2 from,Vector2 to){
+	public List<XPath> GetPaths(Vector2 from,Vector2 to){
 		IntVector2 fromCell = FindReachableCell (from,3,3);
 		IntVector2 toCell = FindReachableCell (to,4,3);
 
-		FindPathNew (fromCell, toCell);
-
-		if (m_paths.Count > 0)
-			return m_paths [0];
-
-		return null;
+		return m_pathFinder.FindPath ( fromCell, toCell);
 	}
-
-	private IntVector2 FindReachableCell(Vector2 pos,int vTollerance,int hTollerance){
-		IntVector2 cell = PosToCell (pos);
-		for (int i = 0; i < vTollerance; i++) {
-			if(m_moveMatrix[cell.x,cell.y - i] != 0){
-				cell.y -= i;
-				return cell;
-			}
-			if(m_moveMatrix[cell.x,cell.y + i] != 0){
-				cell.y += i;
-				return cell;
-			}
-		}
-
-		for (int i = 0; i < hTollerance; i++) {
-			if(m_moveMatrix[cell.x - i,cell.y] != 0){
-				cell.x -= i;
-				return cell;
-			}
-			if(m_moveMatrix[cell.x + i,cell.y] != 0){
-				cell.x += i;
-				return cell;
-			}
-		}
-		return cell;
-	}
-
-	IntVector2 m_pStart;
-	IntVector2 m_pEnd;
-	public void FindPathNew( IntVector2 from, IntVector2 to) 
-	{
-		m_path.Clear ();
-		m_pStart = from;
-		m_pEnd = to;
-
-		#if DEBUG_PATH_FINDING
-		StartCoroutine (recursePath(from,to));
-		#else
-		recursePath(from,to);
-		#endif
-
-		/*List<int> toRemove = new List<int> ();
-
-		//remove dangerous paths
-		for(int i = 0; i < m_paths.Count; i++){
-			int noFallCells = 0;
-			for (int j = 0; j < m_paths [i].Size; j++) {
-				IntVector2 cell = m_paths [i].Get (j);
-				if (canPassDown (cell) && !canPassUp (cell)) {
-					noFallCells++;
-					if (noFallCells > 7) {
-						toRemove.Add (i);
-						j = m_paths [i].Size;//go to next path
-					}
-				} else
-					noFallCells = 0;
-			}
-		}
-
-		for (int i = toRemove.Count - 1; i >= 0; i--)
-			m_paths.RemoveAt (toRemove[i]);
-
-		Debug.LogError ("Remaining paths "+m_paths.Count);*/
-	}
-
-	#if DEBUG_PATH_FINDING
-	private IEnumerator recursePath(IntVector2 current, IntVector2 to) {
-		yield return null;
-	#else
-	private void recursePath(IntVector2 current, IntVector2 to) {
-	#endif
-		m_path.Push (current);
-
-		if(current.x == to.x && current.y == to.y) {
-			// arrived at destination
-			m_paths.Add (new XPath(m_path));
-		}else {
-			if (canPassLeft (current)) {
-				IntVector2 left = new IntVector2 (current.x - 1, current.y);
-				if (!m_path.Contains (left)) {
-					#if DEBUG_PATH_FINDING
-					yield return StartCoroutine(recursePath (left, to));
-					#else
-					recursePath ( left, to);
-					#endif
-				}// else cannot go this way
-			}
-
-			if (canPassRight (current)) {
-				IntVector2 right = new IntVector2 (current.x + 1, current.y);
-				if (!m_path.Contains (right)) {
-					#if DEBUG_PATH_FINDING
-					yield return StartCoroutine(recursePath (right, to));
-					#else
-					recursePath ( right, to);
-					#endif
-				}// else cannot go this way
-			}
-
-			if (canPassDown (current)) {
-				IntVector2 down = new IntVector2 (current.x, current.y - 1);
-				if (!m_path.Contains (down)) {
-					#if DEBUG_PATH_FINDING
-					yield return StartCoroutine(recursePath (down, to));
-					#else
-					recursePath (down, to);
-					#endif
-				}//else cannot go this way
-			}
-
-			if (canPassUp (current)) {
-				IntVector2 up = new IntVector2 (current.x, current.y + 1);
-				if (!m_path.Contains (up)) {
-					#if DEBUG_PATH_FINDING
-					yield return StartCoroutine(recursePath (up, to));
-					#else
-					recursePath (up, to);
-					#endif
-				}//else cannot go this way
-			}
-		}
-
-		m_path.Pop();
-	}
-
-	private IntVector2 PosToCell(Vector2 pos){
-		Vector2 gridPos = new Vector2 (transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y);
-
-		float cellX	= (pos.x - gridPos.x) / m_cellSize.x;
-		float cellY = (pos.y - gridPos.y) / m_cellSize.y;
-
-		return new IntVector2 (Mathf.RoundToInt (cellX), Mathf.RoundToInt (cellY));
-	}
-
+		
 	public void Scan()
 	{
 		m_grid = new LevelObject.Type[ m_gridSize.x, m_gridSize.y];
@@ -279,7 +142,7 @@ public class LevelCollisionMap : kBehaviourScript {
 			return false;
 		
 		IntVector2 topCell = new IntVector2 (x, y + 1);
-		if((y < m_gridSize.y - 1 && (canPassDown(topCell) && !canPassUp(topCell))) 
+		if((y < m_gridSize.y - 1 && (CanPassCellDown(topCell) && !CanPassCellUp(topCell))) 
 		|| (x > 0 && m_grid[x - 1, y] == LevelObject.Type.Platform)
 		|| (x < m_gridSize.x - 1 && m_grid[x + 1, y] == LevelObject.Type.Platform))
 			return true;
@@ -299,31 +162,76 @@ public class LevelCollisionMap : kBehaviourScript {
 		return false;
 	}
 
-	public bool canPass( IntVector2 cell){
+	public bool CanPassCell( IntVector2 cell){
 		return m_moveMatrix[cell.x,cell.y] != 0;
 	}
 
-	public bool canPassLeft( IntVector2 cell){
+	public bool CanPassCellLeft( IntVector2 cell){
 		return cell.x > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_LEFT_DIR) != 0;
 	}
 
-	public bool canPassRight( IntVector2 cell){
+	public bool CanPassCellRight( IntVector2 cell){
 		return cell.x < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_RIGHT_DIR) != 0;
 	}
 
-	public bool canPassUp( IntVector2 cell){
+	public bool CanPassCellUp( IntVector2 cell){
 		return cell.y < m_gridSize.x - 1 && (m_moveMatrix[cell.x,cell.y] & MOVE_UP_DIR) != 0;
 	}
 
-	public bool canPassDown( IntVector2 cell){
+	public bool CanPassCellDown( IntVector2 cell){
 		return cell.y > 0 && (m_moveMatrix[cell.x,cell.y] & MOVE_DOWN_DIR) != 0;
 	}
 
+	private IntVector2 FindReachableCell(Vector2 pos,int vTollerance,int hTollerance){
+		IntVector2 cell = PosToCell (pos);
+		for (int i = 0; i < vTollerance; i++) {
+			if(m_moveMatrix[cell.x,cell.y - i] != 0){
+				cell.y -= i;
+				return cell;
+			}
+			if(m_moveMatrix[cell.x,cell.y + i] != 0){
+				cell.y += i;
+				return cell;
+			}
+		}
+
+		for (int i = 0; i < hTollerance; i++) {
+			if(m_moveMatrix[cell.x - i,cell.y] != 0){
+				cell.x -= i;
+				return cell;
+			}
+			if(m_moveMatrix[cell.x + i,cell.y] != 0){
+				cell.x += i;
+				return cell;
+			}
+		}
+		return cell;
+	}
+
+	public IntVector2 PosToCell(Vector2 pos){
+		Vector2 gridPos = new Vector2 (transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y);
+
+		float cellX	= (pos.x - gridPos.x) / m_cellSize.x;
+		float cellY = (pos.y - gridPos.y) / m_cellSize.y;
+
+		return new IntVector2 (Mathf.RoundToInt (cellX), Mathf.RoundToInt (cellY));
+	}
+
+	public Vector3 CellToPos(IntVector2 cell){
+		float gridHeight = m_gridSize.y * m_cellSize.y;
+		return new Vector3 ( 	transform.position.x + cell.x * m_cellSize.x + m_cellSize.x / 2, 
+								transform.position.y - gridHeight + cell.y * m_cellSize.y + m_cellSize.y / 2, 
+								transform.position.z);
+	}
+
 	#if UNITY_EDITOR	
-	static Color red = new Color(1,0,0,0.3f);
-	static Color green = new Color(0,1,0,0.5f);
-	static Color gray = new Color(0.7f,0.7f,0.7f,0.1f);
-	static Color blue = new Color(0,0,1,0.3f);
+	public Color platformColor = new Color(1,0,0,0.3f);
+	public Color ladderColor = new Color(0,0,1,0.3f);
+	public Color emptyCell = new Color(0.7f,0.7f,0.7f,0.1f);
+
+	public Color moveCellse = new Color(0,1,0,0.5f);
+
+	public Color[] m_pathColors;
 
 	void OnDrawGizmos(){
 		float width = m_gridSize.x * m_cellSize.x; 
@@ -334,7 +242,8 @@ public class LevelCollisionMap : kBehaviourScript {
 			Gizmos.DrawWireCube(	transform.position + Vector3.right * width / 2 + Vector3.down * height / 2,
 									new Vector3(m_gridSize.x * m_cellSize.x, m_gridSize.y * m_cellSize.y, 2));
 
-			if (m_grid != null) {
+			if (m_grid != null)
+			{
 				for (int y = 0; y < m_gridSize.y; y++) {
 					for (int x = 0; x < m_gridSize.x; x++) {
 						Vector3 pos = new Vector3 (	transform.position.x + x * m_cellSize.x + m_cellSize.x/2, 
@@ -342,13 +251,13 @@ public class LevelCollisionMap : kBehaviourScript {
 													transform.position.z);
 
 						if (m_grid [x, y] == LevelObject.Type.Platform) {
-							Gizmos.color = red;
+							Gizmos.color = platformColor;
 							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 						} else if (m_grid [x, y] == LevelObject.Type.Ladder) {
-							Gizmos.color = blue;
+							Gizmos.color = ladderColor;
 							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 						} else {
-							Gizmos.color = gray;
+							Gizmos.color = emptyCell;
 							Gizmos.DrawWireCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 						}
 					}
@@ -366,8 +275,8 @@ public class LevelCollisionMap : kBehaviourScript {
 													transform.position.z);
 						cell.x = x;
 						cell.y = y;
-						if (canPass(cell)) {
-							Gizmos.color = green;
+						if (CanPassCell(cell)) {
+							Gizmos.color = moveCellse;
 							Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
 
 							DrawArrows( pos, cell);
@@ -380,41 +289,7 @@ public class LevelCollisionMap : kBehaviourScript {
 			}
 		}
 
-		for (int i = 0; i < m_paths.Count; i++) {
-			DrawPath (m_paths[i],m_colors[i]);
-		}
-
-		DrawPath (m_path,new Color(1,1,0,0.8f));
-
-		Vector3 start = new Vector3 (	transform.position.x + m_pStart.x * m_cellSize.x + m_pStart.x / 2, 
-										transform.position.y - height + m_pStart.y * m_cellSize.y + m_cellSize.y / 2, 
-										transform.position.z);
-		Gizmos.color = Color.red;
-		Gizmos.DrawCube (start, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
-	
-		Vector3 end = new Vector3 (	transform.position.x + m_pEnd.x * m_cellSize.x + m_pEnd.x / 2, 
-									transform.position.y - height + m_pEnd.y * m_cellSize.y + m_cellSize.y / 2, 
-									transform.position.z);
-		Gizmos.color = Color.red;
-		Gizmos.DrawCube (end, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
-	}
-
-	public Color[] m_colors;
-
-	void DrawPath(XPath path, Color col)
-	{
-		float height= m_gridSize.y * m_cellSize.y; 
-		if (path != null) 
-		{
-			for (int i = 0; i < path.Size; i++) {
-				IntVector2 waipoint = path.Get (i);
-				Vector3 pos = new Vector3 (	transform.position.x + waipoint.x * m_cellSize.x + m_cellSize.x / 2, 
-											transform.position.y - height + waipoint.y * m_cellSize.y + m_cellSize.y / 2, 
-											transform.position.z);
-				Gizmos.color = col;
-				Gizmos.DrawCube (pos, new Vector3 (m_cellSize.x, m_cellSize.y, 2));
-			}
-		}
+		m_pathFinder.DrawPaths (m_pathColors);
 	}
 
 	void DrawArrows(Vector3 pos,IntVector2 cell){
@@ -422,7 +297,7 @@ public class LevelCollisionMap : kBehaviourScript {
 		float arrowTail = arrowSize * 0.75f;
 		float arrowHead = arrowSize * 0.25f;
 
-		if(canPassLeft(cell)){
+		if(CanPassCell(cell)){
 			Gizmos.color = Color.white;
 
 			Vector3 p1 = pos + Vector3.left * arrowTail;
@@ -433,7 +308,7 @@ public class LevelCollisionMap : kBehaviourScript {
 			Gizmos.DrawLine( p1 + Vector3.up * arrowHead, p1 + Vector3.down * arrowHead);
 		}
 
-		if(canPassRight(cell)){
+		if(CanPassCellRight(cell)){
 			Gizmos.color = Color.yellow;
 			Vector3 p1 = pos + Vector3.right * arrowTail;
 			Gizmos.DrawLine( pos, p1);
@@ -443,7 +318,7 @@ public class LevelCollisionMap : kBehaviourScript {
 			Gizmos.DrawLine( p1 + Vector3.up * arrowHead, p1 + Vector3.down * arrowHead);
 		}
 
-		if(canPassUp(cell)){
+		if(CanPassCellUp(cell)){
 			Gizmos.color = Color.green;
 			Vector3 p1 = pos + Vector3.up * arrowTail;
 			Gizmos.DrawLine( pos, p1);
@@ -453,7 +328,7 @@ public class LevelCollisionMap : kBehaviourScript {
 			Gizmos.DrawLine( p1 + Vector3.left * arrowHead, p1 + Vector3.right * arrowHead);
 		}
 
-		if(canPassDown(cell)){
+		if(CanPassCellDown(cell)){
 			Gizmos.color = Color.red;
 			Vector3 p1 = pos + Vector3.down * arrowTail;
 			Gizmos.DrawLine( pos, p1);
@@ -463,5 +338,6 @@ public class LevelCollisionMap : kBehaviourScript {
 			Gizmos.DrawLine( p1 + Vector3.left * arrowHead, p1 + Vector3.right * arrowHead);
 		}
 	}
+
 	#endif
 }

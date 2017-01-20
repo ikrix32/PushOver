@@ -6,7 +6,7 @@ using System;
 
 public class Level : kBehaviourScript {
 
-	protected LevelCollisionMap m_finder;
+	protected LevelCollisionMap m_collisionMap;
 
 	public kSpriteObject m_background;
 	public GameObject m_dominosRoot;
@@ -21,8 +21,8 @@ public class Level : kBehaviourScript {
 
 		m_ant.transform.position = m_enterDoor.transform.position + Vector3.down * 50;
 
-		m_finder = gameObject.GetComponent<LevelCollisionMap> ();
-		m_finder.Scan ();
+		m_collisionMap = gameObject.GetComponent<LevelCollisionMap> ();
+		m_collisionMap.Scan ();
 
 		kTouchable touch = m_background.GetComponent<kTouchable> ();
 		if(touch == null)
@@ -60,7 +60,7 @@ public class Level : kBehaviourScript {
 
 	protected void TouchPressed(Touch t){
 		//Debug.LogError ("Touch pressed at pos:"+t.position);
-		m_finder.FindPath ( m_ant.transform.position, t.position);
+		m_collisionMap.GetPaths ( m_ant.transform.position, t.position);
 	}
 
 	protected void TouchReleased(Touch t){
@@ -68,12 +68,12 @@ public class Level : kBehaviourScript {
 	}
 
 	public void SetupPathfinding(Vector2 cellSize){
-		m_finder = gameObject.AddComponent<LevelCollisionMap> ();
-		m_finder.m_cellSize = cellSize;
+		m_collisionMap = gameObject.AddComponent<LevelCollisionMap> ();
+		m_collisionMap.m_cellSize = cellSize;
 
 		Rect bkgBounds = m_background.getBounds ();
-		m_finder.m_gridSize = new IntVector2 ( (int)(bkgBounds.width / cellSize.x), (int)(bkgBounds.height / cellSize.y));
-		m_finder.Scan ();
+		m_collisionMap.m_gridSize = new IntVector2 ( (int)(bkgBounds.width / cellSize.x), (int)(bkgBounds.height / cellSize.y));
+		m_collisionMap.Scan ();
 	}
 
 	public void AddObject(LevelObject template, string name,float x,float y)
