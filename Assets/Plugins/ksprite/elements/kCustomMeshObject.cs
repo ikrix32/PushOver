@@ -80,7 +80,7 @@ public class kCustomMeshObject : kPickerItem
 	}
 	
 	//TODO - remove and use iTween for alpha transition
-	public void setAlpha(float alpha) {
+	public override void setAlpha(float alpha) {
 		Color col = getBlendingColor();
 		col.a = alpha;
 		setBlendingColor(col);

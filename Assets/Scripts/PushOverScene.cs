@@ -91,25 +91,25 @@ public class PushOverScene : kScene
 				int x = 0, y = 0;
 
 				while(textLines[crtLine].Length > 0 && textLines[crtLine][0] == '|' && crtLine < textLines.Length){
-					int start = -1;
+					//int start = -1;
 					int i = 0;
 					while(i < textLines[crtLine].Length){
 						while(i < textLines[crtLine].Length && (textLines[crtLine][i] == '|' || textLines[crtLine][i] == ' '))
 							i++;
 
 						if(i < textLines[crtLine].Length){
-							start = i;
+							//start = i;
 							while(i < textLines[crtLine].Length && textLines[crtLine][i] != ' ')
 								i++;
 
 							if(i < textLines[crtLine].Length)
 							{
-								string moduleIndexStr = textLines[crtLine].Substring(start, i - start);
-								int moduleIndex = Int32.Parse(moduleIndexStr);
+								//string moduleIndexStr = textLines[crtLine].Substring(start, i - start);
+								//int moduleIndex = Int32.Parse(moduleIndexStr);
 
 								//create a frame
 								//Module m = (Module)DataController.m_sprite.getSelectedImage().modules.get(noForegroundTiles[theme] + moduleIndex);
-								Vector2 pos = new Vector2(x,y); 
+								//Vector2 pos = new Vector2(x,y); 
 								/* layers Frame.FrameComponent fComp = newFrame.new FrameComponent(m_sprite,m,
 															 pos,0,1.0f,1.0f,0xFF,0);
 								newFrame.getComponents().add(fComp);

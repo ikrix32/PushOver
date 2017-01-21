@@ -48,7 +48,6 @@ public class LevelCollisionMap : kBehaviourScript {
 		Rect gridBounds = new Rect (	transform.position.x, transform.position.y - m_gridSize.y * m_cellSize.y,
 										m_gridSize.x * m_cellSize.x, m_gridSize.y * m_cellSize.y);
 
-		Vector2 cellTollerance = new Vector2(0.2f * m_cellSize.x, 0.2f * m_cellSize.y);
 		for (int i = 0; i < objects.Length; i++) {
 			Rect objectBounds = objects [i].getBoundsWorld ();
 

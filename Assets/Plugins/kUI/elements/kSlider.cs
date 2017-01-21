@@ -100,7 +100,7 @@ public class kSlider : kSpriteObject
 		float knobPosPercent = sliderValue * 1.0f / (sliderSteps - 1);
 
 		Rect sliderBounds = getBounds();
-		Rect knobBounds = knob.getBounds();
+		//Rect knobBounds = knob.getBounds();
 
 		Vector2 knobCenterStartPosInsideSlider = sliderBounds.center + Vector2.left *  (sliderBounds.width/2 - knobStartPosOffsetX);
 

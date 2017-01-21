@@ -172,7 +172,7 @@ public class kSpriteObject : kPickerItem
 		return frame;
 	}
 	
-	public virtual void setAlpha(float alpha){
+	public override void setAlpha(float alpha){
 		Color x = getBlendingColor();
 		x.a = alpha;
 		setBlendingColor(x);

@@ -71,7 +71,7 @@ public abstract class kTextField: kPickerItem
 	public abstract void setColor(Color color);
 	public abstract Color getColor();
 
-	public abstract void setAlpha(float alpha);
+//	public abstract void setAlpha(float alpha);
 
 	public abstract float stringWidth(string s);
 

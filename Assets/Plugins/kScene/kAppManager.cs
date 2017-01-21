@@ -241,9 +241,9 @@ public abstract class kAppManager{
 		{
 			if(viewStack.Count > 0 )
 			{
-				bool overlapping = (viewAnimType == ViewTransitionType.SLIDE_OVER_LEFT || viewAnimType == ViewTransitionType.SLIDE_OVER_RIGHT
-								|| viewAnimType == ViewTransitionType.SLIDE_OVER_UP || viewAnimType == ViewTransitionType.SLIDE_OVER_DOWN
-								|| viewAnimType == ViewTransitionType.FADE);
+//				bool overlapping = (viewAnimType == ViewTransitionType.SLIDE_OVER_LEFT || viewAnimType == ViewTransitionType.SLIDE_OVER_RIGHT
+//								|| viewAnimType == ViewTransitionType.SLIDE_OVER_UP || viewAnimType == ViewTransitionType.SLIDE_OVER_DOWN
+//								|| viewAnimType == ViewTransitionType.FADE);
 				
 				if(hidePrevViewAfterTransition || transitionType != TransType.PUSH)// || !overlapping)
 				{
@@ -661,7 +661,7 @@ public abstract class kAppManager{
 
 		GameObject[] objects = (GameObject[])Resources.FindObjectsOfTypeAll(typeof(GameObject));
 		for(int i = 0;i < objects.Length;i++){
-			bool canBeDestroyed = true;
+//			bool canBeDestroyed = true;
 			if(objects[i] != null && canDestroyObject(objects[i].name))
 				GameObject.Destroy(objects[i]);
 		}

@@ -38,7 +38,7 @@ public struct IntRect{
 		this.width = (int)width;
 	}
 
-	public string ToString(){
+	public override string ToString(){
 		return "["+x+","+y+"]["+width+","+height+"]";
 	}
 }

@@ -238,7 +238,7 @@ public static class PostBuildTrigger
 
 		if (File.Exists(projectFile)) {
 			string content = File.ReadAllText(projectFile);
-			bool changed = false;
+//			bool changed = false;
 
 			string targetAttrib = 	"\t\t\t\t\t1D6058900D05DD3D006BFB54 = {\n\t\t\t\t\t\tDevelopmentTeam = 56458FQAD9;\n\t\t\t\t\t\tSystemCapabilities = {\n\t\t\t\t\t\t\tcom.apple.HealthKit = {\n\t\t\t\t\t\t\t\tenabled = 1;\n\t\t\t\t\t\t\t};\n\t\t\t\t\t\t};\n\t\t\t\t\t};\n\t\t\t\t\t5623C57217FDCB0800090B9E = {\n";
 			string refKey = "5623C57217FDCB0800090B9E /* Fitkin Tests */ = {";

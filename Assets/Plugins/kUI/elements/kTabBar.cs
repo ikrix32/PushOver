@@ -5,7 +5,7 @@ using System.Collections.Generic;
 public class kTabBar : kSpriteObject 
 {
 	private const float Z_OFFSET_HIGHLIGHT_TAB = 1f;
-	private Color TAB_ITEM_SELECTED  = new Color(17/255f, 83/255f, 196/255f);
+//	private Color TAB_ITEM_SELECTED  = new Color(17/255f, 83/255f, 196/255f);
 	public  Color TAB_ITEM_DESELECTED  = new Color(21/255f, 151/255f, 248/255f);
 	public bool m_bringFrontHighlightedTab = false;
 	
